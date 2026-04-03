@@ -1,0 +1,10 @@
+streamlit
+pyrebase4
+firebase-admin
+yfinance
+pandas
+numpy
+joblib
+tensorflow
+scikit-learn
+

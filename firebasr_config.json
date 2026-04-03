@@ -1,0 +1,11 @@
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCaqjIaakBujL5a0BtXddoajj---jy3wmo",
+  authDomain: "stock-market-prediction-8155a.firebaseapp.com",
+  databaseURL: "https://stock-market-prediction-8155a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "stock-market-prediction-8155a",
+  storageBucket: "stock-market-prediction-8155a.firebasestorage.app",
+  messagingSenderId: "163368571424",
+  appId: "1:163368571424:web:f5bd371617ad4c7e27a245",
+  measurementId: "G-8JK25CTXMZ"
+};
