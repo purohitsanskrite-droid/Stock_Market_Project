@@ -1,69 +1,30 @@
-# ✅ FIXED VERSION (TensorFlow removed + safe prediction)
+# ✅ FINAL STABLE VERSION (All errors fixed + safe handling)
 
 import streamlit as st
-from streamlit import session_state as ss
-import pyrebase
-import firebase_admin
-from firebase_admin import credentials, firestore
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import joblib
-import os
-from datetime import datetime
-
-# ---------------- CONFIG ----------------
-FIREBASE_CONFIG = {
-    "apiKey": "YOUR_API_KEY",
-    "authDomain": "YOUR_PROJECT.firebaseapp.com",
-    "databaseURL": "https://YOUR_PROJECT.firebaseio.com",
-    "projectId": "YOUR_PROJECT",
-    "storageBucket": "YOUR_PROJECT.appspot.com",
-    "messagingSenderId": "SENDER_ID",
-    "appId": "APP_ID"
-}
-
-SERVICE_ACCOUNT_PATH = "serviceAccountKey.json"
-SCALER_PATH = "scaler.pkl"
-
-# ---------------- FIREBASE ----------------
-firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
-auth = firebase.auth()
-
-if os.path.exists(SERVICE_ACCOUNT_PATH):
-    cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
-    try:
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-    except:
-        db = None
-else:
-    db = None
-
-# ---------------- LOAD SCALER ----------------
-@st.cache_resource
-def load_scaler(path=SCALER_PATH):
-    if os.path.exists(path):
-        return joblib.load(path)
-    return None
-
-scaler = load_scaler()
 
 # ---------------- DATA ----------------
 @st.cache_data(ttl=3600)
 def fetch_history(ticker, period='1y', interval='1d'):
-    data = yf.download(ticker, period=period, interval=interval, progress=False)
-    if data.empty:
+    try:
+        data = yf.download(ticker, period=period, interval=interval, progress=False)
+        if data is None or data.empty:
+            return None
+        data = data[['Open','High','Low','Close','Volume']]
+        data = data.dropna()
+        return data
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
         return None
-    data = data[['Open','High','Low','Close','Volume']]
-    data = data.dropna()
-    return data
 
 # ---------------- PREDICTION ----------------
 def make_prediction(history_df, seq_len=60):
     if history_df is None or history_df.shape[0] < seq_len:
         return None, "Not enough data"
 
+    # clean data
     history_df = history_df.dropna()
 
     if history_df.shape[0] < seq_len:
@@ -76,16 +37,26 @@ def make_prediction(history_df, seq_len=60):
 
     last_val = series[-1]
 
-    if np.isnan(last_val):
+    # safe conversion
+    try:
+        last_val = float(last_val)
+    except:
         return None, "Invalid last value"
 
-    pred = float(last_val * (1 + np.random.normal(0, 0.01)))
+    if np.isnan(last_val):
+        return None, "Last value is NaN"
+
+    try:
+        pred = float(last_val * (1 + np.random.normal(0, 0.01)))
+    except Exception as e:
+        return None, f"Prediction error: {e}"
+
     return pred, "Simulated prediction"
 
 # ---------------- UI ----------------
 st.set_page_config(page_title="StockPredictor", layout="wide")
 
-st.title("📈 Stock Predictor")
+st.title("📈 Stock Predictor (Stable Version)")
 
 with st.form('form'):
     ticker = st.text_input("Ticker", "AAPL")
@@ -97,8 +68,9 @@ if submit:
     history = fetch_history(ticker, period)
 
     if history is None:
-        st.error("No data")
+        st.error("No data found. Try another ticker.")
     else:
+        st.subheader("Recent Data")
         st.dataframe(history.tail())
 
         pred, msg = make_prediction(history, seq_len)
@@ -107,16 +79,16 @@ if submit:
             st.warning(msg)
         else:
             last = float(history['Close'].iloc[-1])
-            st.metric("Prediction", f"{pred:.2f}")
+
+            st.metric("Predicted Price", f"{pred:.2f}")
             st.write(msg)
 
             change = (pred - last)/last*100
 
             if change > 0:
-                st.success(f"📈 +{change:.2f}% expected")
+                st.success(f"📈 Expected Increase: +{change:.2f}%")
             else:
-                st.error(f"📉 {change:.2f}% expected")
+                st.error(f"📉 Expected Decrease: {change:.2f}%")
 
 st.markdown("---")
-st.caption("Not financial advice")
-
+st.caption("⚠️ Not financial advice")
