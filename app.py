@@ -1,4 +1,4 @@
-# 🚀 BULLETPROOF STREAMLIT STOCK APP (Charts + Safe + Stable)
+# 🚀 FINAL BULLETPROOF STREAMLIT STOCK APP (All errors fixed)
 
 import streamlit as st
 import yfinance as yf
@@ -11,11 +11,25 @@ import plotly.graph_objects as go
 def fetch_history(ticker, period='1y', interval='1d'):
     try:
         data = yf.download(ticker, period=period, interval=interval, progress=False)
+
         if data is None or data.empty:
             return None
-        data = data[['Open','High','Low','Close','Volume']]
+
+        # ✅ Fix MultiIndex issue
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
+        required_cols = ['Open','High','Low','Close','Volume']
+
+        missing = [col for col in required_cols if col not in data.columns]
+        if missing:
+            return None
+
+        data = data[required_cols]
         data = data.dropna()
+
         return data
+
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
@@ -53,9 +67,9 @@ def make_prediction(history_df, seq_len=60):
     return pred, "Simulated prediction"
 
 # ---------------- UI ----------------
-st.set_page_config(page_title="StockPredictor Pro", layout="wide")
+st.set_page_config(page_title="StockPredictor PRO", layout="wide")
 
-st.title("📈 Stock Predictor PRO (Bulletproof)")
+st.title("📈 Stock Predictor PRO (Final Stable)")
 
 with st.form('form'):
     ticker = st.text_input("Ticker", "AAPL")
@@ -74,26 +88,33 @@ if submit:
         st.dataframe(history.tail())
 
         # ---------------- LINE CHART ----------------
-        st.subheader("📈 Price Trend")
-        st.line_chart(history['Close'])
+        if 'Close' in history.columns:
+            st.subheader("📈 Price Trend")
+            st.line_chart(history['Close'])
 
         # ---------------- SMA ----------------
-        history['SMA20'] = history['Close'].rolling(20).mean()
-        history['SMA50'] = history['Close'].rolling(50).mean()
+        if 'Close' in history.columns:
+            history['SMA20'] = history['Close'].rolling(20).mean()
+            history['SMA50'] = history['Close'].rolling(50).mean()
 
-        st.subheader("📊 Moving Averages")
-        st.line_chart(history[['Close','SMA20','SMA50']].dropna())
+            cols = ['Close','SMA20','SMA50']
+            available_cols = [c for c in cols if c in history.columns]
+
+            if available_cols:
+                st.subheader("📊 Moving Averages")
+                st.line_chart(history[available_cols].dropna())
 
         # ---------------- CANDLESTICK ----------------
-        st.subheader("🕯️ Candlestick Chart")
-        fig = go.Figure(data=[go.Candlestick(
-            x=history.index,
-            open=history['Open'],
-            high=history['High'],
-            low=history['Low'],
-            close=history['Close']
-        )])
-        st.plotly_chart(fig, use_container_width=True)
+        if all(col in history.columns for col in ['Open','High','Low','Close']):
+            st.subheader("🕯️ Candlestick Chart")
+            fig = go.Figure(data=[go.Candlestick(
+                x=history.index,
+                open=history['Open'],
+                high=history['High'],
+                low=history['Low'],
+                close=history['Close']
+            )])
+            st.plotly_chart(fig, use_container_width=True)
 
         # ---------------- PREDICTION ----------------
         pred, msg = make_prediction(history, seq_len)
@@ -115,5 +136,4 @@ if submit:
                 st.error(f"📉 Expected Decrease: {change:.2f}%")
 
 st.markdown("---")
-st.caption("⚠️ Not financial advice | Built by Ayush 💀🚀")
-
+st.caption("⚠️ Not financial advice | Fully stable build 💀🚀")
