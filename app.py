@@ -137,15 +137,13 @@
 
 # st.markdown("---")
 
-
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from sklearn.preprocessing import MinMaxScaler
-
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 import time
