@@ -135,8 +135,6 @@
 #             else:
 #                 st.error(f"📉 Expected Decrease: {change:.2f}%")
 
-# st.markdown("---")
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
